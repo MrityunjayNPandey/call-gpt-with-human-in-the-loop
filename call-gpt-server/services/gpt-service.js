@@ -24,7 +24,7 @@ async function loadGlobalKnowledgeBase() {
 const availableFunctions = {};
 tools.forEach((tool) => {
   let functionName = tool.function.name;
-  availableFunctions[functionName] = require(`../functions/${functionName}`);
+  availableFunctions[functionName] = require(`../functions/${functionName}.js`);
 });
 
 class GptService extends EventEmitter {

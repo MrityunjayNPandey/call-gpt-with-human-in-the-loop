@@ -1,0 +1,40 @@
+services:
+  mongo:
+    image: mongo:latest
+    container_name: mongodb-call-gpt
+    command: mongod --quiet --logpath /dev/null
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - app-network
+
+  call-gpt-server:
+    build: call-gpt-server
+    container_name: call-gpt-server
+    env_file:
+      - ./call-gpt-server/.env
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mongo
+    networks:
+      - app-network
+
+  call-gpt-human-supervisor-client:
+    build: human-supervisor-frontend
+    container_name: call-gpt-human-supervisor-client
+    env_file:
+      - ./human-supervisor-frontend/.env
+    ports:
+      - "3000:3000"
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  mongodb_data:

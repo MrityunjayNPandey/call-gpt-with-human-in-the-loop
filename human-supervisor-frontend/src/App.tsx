@@ -203,6 +203,7 @@ function App() {
       return Promise.resolve([]); // Return empty for knowledgeBase tab
     },
     enabled: activeTab === "pending" || activeTab === "unresolved", // Only fetch if it's a help request tab
+    refetchInterval: 5000, // Refetch every 5 seconds
   });
 
   // Query for knowledge base items
@@ -364,6 +365,7 @@ function App() {
 
   if (
     isLoadingHelpRequests &&
+    !displayedHelpRequests?.length &&
     (activeTab === "pending" || activeTab === "unresolved")
   )
     return <p>Loading requests...</p>;
