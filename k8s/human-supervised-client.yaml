@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: human-supervised-client
+spec:
+  selector:
+    matchLabels:
+      app: human-supervised-client
+  template:
+    metadata:
+      labels:
+        app: human-supervised-client
+    spec:
+      containers:
+        - name: human-supervised-client
+          image: joker0/call-gpt-human-supervisor-client:latest # You'll need to update this with your image
+          ports:
+            - containerPort: 3000
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 300
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "20Mi"
+            limits:
+              cpu: "100m"
+              memory: "100Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: human-supervised-client-service
+spec:
+  selector:
+    app: human-supervised-client
+  ports:
+    - port: 80
+      targetPort: 3000
+  type: LoadBalancer
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: human-supervised-client-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: human-supervised-client
+  minReplicas: 1
+  maxReplicas: 3
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 50
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 50

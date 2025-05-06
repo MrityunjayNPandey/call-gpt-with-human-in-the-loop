@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: call-gpt-server
+spec:
+  selector:
+    matchLabels:
+      app: call-gpt-server
+  template:
+    metadata:
+      labels:
+        app: call-gpt-server
+    spec:
+      containers:
+        - name: call-gpt-server
+          image: joker0/call-gpt-server:latest # You'll need to update this with your image
+          envFrom:
+            - secretRef:
+                name: call-gpt-secret # need to create a secret for this before deployment
+          ports:
+            - containerPort: 8080
+          livenessProbe:
+            httpGet:
+              path: /helpRequests?status=pending
+              port: 8080
+            initialDelaySeconds: 300
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /helpRequests?status=pending
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 5
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "300m"
+              memory: "512Mi"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: call-gpt-server-service
+spec:
+  selector:
+    app: call-gpt-server
+  ports:
+    - port: 8080
+      targetPort: 8080
+  type: LoadBalancer
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: call-gpt-server-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: call-gpt-server
+  minReplicas: 1
+  maxReplicas: 3
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 50
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 50

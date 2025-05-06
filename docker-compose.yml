@@ -1,5 +1,5 @@
 services:
-  mongo:
+  mongodb-service:
     image: mongo:latest
     container_name: mongodb-call-gpt
     command: mongod --quiet --logpath /dev/null
@@ -10,7 +10,7 @@ services:
     networks:
       - app-network
 
-  call-gpt-server:
+  call-gpt-server-service:
     build: call-gpt-server
     container_name: call-gpt-server
     env_file:
@@ -22,11 +22,11 @@ services:
     networks:
       - app-network
 
-  call-gpt-human-supervisor-client:
-    build: human-supervisor-frontend
-    container_name: call-gpt-human-supervisor-client
+  human-supervised-client:
+    build: human-supervised-client
+    container_name: human-supervised-client
     env_file:
-      - ./human-supervisor-frontend/.env
+      - ./human-supervised-client/.env
     ports:
       - "3000:3000"
     networks:
