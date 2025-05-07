@@ -133,7 +133,6 @@ Before you begin, ensure you have the following:
 ## Supervisor Interaction (Example Workflow)
 
 *   **AI:** "I'm not sure about the specific warranty details for the AirPods Pro Max. Would you like me to check with my supervisor?"
-*   *(User agrees)*
 *   *(AI calls `askSupervisor` function with "What are the warranty details for AirPods Pro Max?")*
 *   **Console Log / Notification System:** `[SUPERVISOR NOTIFICATION] Hey, I need help answering: What are the warranty details for AirPods Pro Max?`
 *   *(Human supervisor sees the request, finds the information, and updates the HelpRequest in MongoDB with the answer: "The AirPods Pro Max come with a 1-year limited warranty.")*
@@ -143,12 +142,35 @@ Before you begin, ensure you have the following:
 
 Refer to the original Call-GPT documentation and the `call-gpt-server/Dockerfile` and `call-gpt-server/fly.toml.example` for deployment guidance (e.g., using Fly.io or other container platforms). Remember to configure your production environment variables, including the `MONGODB_URI` for your production database.
 
+### Kubernetes
+
+If you plan to deploy to a Kubernetes cluster:
+
+1.  **Containerize your application:** Ensure your `call-gpt-server/Dockerfile` is correctly set up to build a container image for the application.
+2.  **Push the image to a registry:** Push your built Docker image to a container registry accessible by your Kubernetes cluster (e.g., Docker Hub, Google Container Registry (GCR), Amazon Elastic Container Registry (ECR)).
+    ```bash
+    docker build -t your-image-name:tag ./call-gpt-server
+    docker push your-image-name:tag
+    ```
+3.  **Create Kubernetes manifest files:** You will typically need at least a `Deployment` and a `Service` manifest.
+    *   `deployment.yaml`: Defines how to run your application, including the image to use, number of replicas, environment variables, and volume mounts if needed.
+    *   `service.yaml`: Defines how to expose your application, for example, using a LoadBalancer or NodePort.
+4.  **Apply the manifests:**
+    ```bash
+    kubectl apply -f k8s/
+    ```
+5.  **Configure Ingress (Optional):** If you need to expose your service via a domain name and handle SSL, you might also need an Ingress controller and Ingress resource.
+6.  **Secrets Management:** Ensure sensitive data like API keys and database URIs are managed securely using Kubernetes Secrets, rather than hardcoding them in your Docker image or deployment files. You would typically reference these secrets in your `deployment.yaml`.
+7.  **MongoDB:** Your Kubernetes deployment will need to connect to a MongoDB instance. This could be a MongoDB service running within the same cluster (e.g., using a StatefulSet or a Helm chart) or an external MongoDB service (like MongoDB Atlas). Ensure your `MONGODB_URI` environment variable is correctly configured for the Kubernetes pods.
+
+Remember to update your Twilio webhook configurations to point to the public IP or domain name of your service running on Kubernetes.
+
 ## Future Enhancements / To-Do
 
-*   Build a simple web interface for supervisors to view and respond to help requests.
 *   Integrate real-time notifications for supervisors (e.g., WebSockets, email, SMS).
 *   Add more sophisticated status management for help requests.
 *   Improve error handling and resilience in the supervisor interaction flow.
+*   Add authentication and authorization mechanisms for supervisors.
 
 ## Acknowledgements
 
