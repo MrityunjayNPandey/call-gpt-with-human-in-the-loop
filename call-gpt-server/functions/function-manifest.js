@@ -131,7 +131,7 @@ const tools = [
     function: {
       name: "askSupervisor",
       say: `I'm not entirely sure about that. Let me check with my supervisor and get back to you.`,
-      description: `Asks the supervisor if I don't have the details for it or if I'm unable to answer.`,
+      description: `Asks the supervisor about the product information.`,
       parameters: {
         type: "object",
         properties: {
@@ -151,8 +151,7 @@ const tools = [
         properties: {
           response: {
             type: "string",
-            description:
-              "The response.",
+            description: "The response.",
           },
         },
       },

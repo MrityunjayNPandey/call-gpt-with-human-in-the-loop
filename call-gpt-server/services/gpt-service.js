@@ -37,13 +37,13 @@ class GptService extends EventEmitter {
     (this.userContext = [
       {
         role: "system",
-        content:
-          "You are an outbound sales representative selling Apple Airpods. You have a youthful and cheery personality. Keep your responses as brief as possible but make every attempt to keep the caller on the phone without being rude. Don't reply more than once at a time. Don't make assumptions about what values to plug into functions. Your knowledge should be strictly from this and only this chat context only. Ask for clarification if a user request is ambiguous, but once a choice like headphone type (in-ear vs over-ear) or a specific model (like AirPods Pro Max) is clearly stated by the user, accept that information and move on to the next step. Speak out all prices to include the currency. Initially, help them decide between models by asking about preferences like 'in-ear or over-ear' or 'noise canceling'. However, once they express a clear preference for a specific model (e.g., 'AirPods Pro Max') or have answered those initial clarifying questions, your priority is to confirm the quantity and then use the 'placeOrder' tool. You have tools available to check inventory, check prices, place orders, transfer calls, and ask your supervisor for help; use these tools decisively once you have the necessary information. For example, if you have clarified with the user and still you're unsure, you MUST use the 'askSupervisor' tool.",
+        content: `You are an outbound sales representative selling Apple AirPods with a youthful, friendly personality. Your goal is to assist customers in finding the right AirPods model while keeping conversations engaging but concise. Follow these guidelines:\n\n1. CONVERSATION FLOW: When a customer confirms interest in AirPods, ask about their preferences (in-ear vs over-ear, noise cancellation needs) before proceeding to specific models.\n\n2. KNOWLEDGE BOUNDARIES: The product information should only be inferred from the current context. Only use the askSupervisor tool when the product information is not in the context. Do NOT use it for basic conversation flow or preference questions.\n\n3. TOOLS USAGE: Use tools decisively only when needed:\n   - checkInventory: When discussing specific models\n   - checkPrice: When a customer asks about pricing\n   - askSupervisor: ONLY for specific product details you don't know\n   - placeOrder: After confirming model and quantity\n\n4. SALES APPROACH: Guide customers through: headphone type → specific model → quantity → order placement.\n\nRemember, your first response after customer confirms interest should ALWAYS be to ask about their preferences between in-ear and over-ear models. For additional context, here are the questions and answers from the knowledge base: ${globalKnowledgeBase
+          .map(
+            (item, index) =>
+              `${index}: Question: ${item.question} | Answer: ${item.answer}`
+          )
+          .join("\n")}`,
       },
-      ...globalKnowledgeBase.map((item) => ({
-        role: "system",
-        content: `Question: ${item.question}\nAnswer: ${item.answer}`,
-      })),
       {
         role: "assistant",
         content:
@@ -100,7 +100,6 @@ class GptService extends EventEmitter {
     let functionName = "";
     let functionArgs = "";
     let finishReason = "";
-    let isThinking = false; // flag to track if we're inside a thinking block
 
     function collectToolInformation(deltas) {
       let name = deltas.tool_calls[0]?.function?.name || "";
@@ -119,23 +118,6 @@ class GptService extends EventEmitter {
       let deltas = chunk.choices[0].delta;
       finishReason = chunk.choices[0].finish_reason;
 
-      // Check for thinking tags
-      if (content.includes("<think>")) {
-        isThinking = true;
-        content = content.replace("<think>", ""); // Remove the tag
-      }
-      if (content.includes("</think>")) {
-        isThinking = false;
-        content = content.replace("</think>", ""); // Remove the tag
-        continue; // Skip this chunk as it contains the closing tag
-      }
-
-      // Skip adding content to partialResponse if we're in thinking mode
-      if (isThinking) {
-        completeResponse += content; // Still add to complete response for context
-        continue; // Skip the rest of the loop
-      }
-
       // Step 2: check if GPT wanted to call a function
       if (deltas.tool_calls) {
         // Step 3: Collect the tokens containing function data
@@ -143,7 +125,7 @@ class GptService extends EventEmitter {
       }
 
       // need to call function on behalf of Chat GPT with the arguments it parsed from the conversation
-      if (finishReason === "tool_calls") {
+      if (finishReason === "tool_calls" && name !== "askSupervisor") {
         // parse JSON string of args into JSON object
 
         const functionToCall = availableFunctions[functionName];
@@ -167,9 +149,6 @@ class GptService extends EventEmitter {
 
         let functionResponse = await functionToCall(validatedArgs);
 
-        // Step 4: send the info on the function call and function response to GPT
-        this.updateUserContext(functionName, "function", functionResponse);
-
         // call the completion function again but pass in the function response to have OpenAI generate a new assistant response
         await this.completion(
           functionResponse,
@@ -181,7 +160,6 @@ class GptService extends EventEmitter {
         // We use completeResponse for userContext
         completeResponse += content;
         // We use partialResponse to provide a chunk for TTS
-        // Only add to partialResponse if not in thinking mode
         partialResponse += content;
         // Emit last partial response and add complete response to userContext
         if (content.trim().slice(-1) === "•" || finishReason === "stop") {
