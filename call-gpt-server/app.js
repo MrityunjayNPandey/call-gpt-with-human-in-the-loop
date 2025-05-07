@@ -178,6 +178,30 @@ app.post("/incoming", (req, res) => {
   }
 });
 
+let gptService;
+let interactionCount = 0;
+
+app.get("/gptcall", async (req, res) => {
+  try {
+    const text = req.body.text; // 'pending', 'resolved', or 'unresolved'
+    let result = "";
+
+    gptService.on("gptreply", async (gptReply, icount) => {
+      result = gptReply.partialResponse;
+      console.log(
+        `Interaction ${icount}: GPT -> TTS: ${gptReply.partialResponse}`.green
+      );
+    });
+    await gptService.completion(text, interactionCount);
+    interactionCount += 1;
+
+    res.json(result);
+  } catch (error) {
+    console.error("Error fetching help requests:", error);
+    res.status(500).json({ error: "Failed to fetch help requests" });
+  }
+});
+
 app.ws("/connection", (ws) => {
   try {
     ws.on("error", console.error);
@@ -278,5 +302,7 @@ app.ws("/connection", (ws) => {
 connectToDatabase().then(() => {
   app.listen(PORT);
   console.log(`Server running on port ${PORT}`);
-  loadGlobalKnowledgeBase();
+  loadGlobalKnowledgeBase().then(() => {
+    gptService = new GptService();
+  });
 });

@@ -23,12 +23,14 @@ const askSupervisor = async function (call) {
     let answer = null;
     const waitTime = 5000;
 
+    let updatedRequest;
+
     while (attempt < maxAttempts) {
       // Wait for the polling interval
       await new Promise((resolve) => setTimeout(resolve, waitTime));
 
       // Check if the help request has been answered
-      const updatedRequest = await HelpRequest.findById(helpRequest._id);
+      updatedRequest = await HelpRequest.findById(helpRequest._id);
 
       if (!updatedRequest) {
         throw new Error("Help request not found");
@@ -44,9 +46,11 @@ const askSupervisor = async function (call) {
       attempt++;
     }
 
-    await HelpRequest.findByIdAndUpdate(helpRequest._id, {
-      $set: { status: "unresolved" },
-    });
+    if (updatedRequest.status !== "resolved") {
+      await HelpRequest.findOneAndUpdate(helpRequest._id, {
+        $set: { status: "unresolved" },
+      });
+    }
 
     if (answer) {
       return `The supervisor says: ${answer}`;
