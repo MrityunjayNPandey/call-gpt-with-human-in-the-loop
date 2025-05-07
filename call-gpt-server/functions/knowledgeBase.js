@@ -15,6 +15,11 @@ const addKnowledgeBase = async (question, answer) => {
     updatedAt: new Date(),
   });
 
+  globalKnowledgeBase.push({
+    question: question,
+    answer: answer,
+  });
+
   return updatedKnowledgeBase;
 };
 
